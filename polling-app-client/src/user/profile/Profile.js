@@ -12,6 +12,8 @@ import ServerError from '../../common/ServerError';
 const TabPane = Tabs.TabPane;
 
 class Profile extends Component {
+    _isMounted = false;
+
     constructor(props) {
         super(props);
         this.state = {
@@ -22,32 +24,44 @@ class Profile extends Component {
     }
 
     loadUserProfile(username) {
-        this.setState({
-            isLoading: true
-        });
-
-        getUserProfile(username)
-        .then(response => {
+        if (this._isMounted) {
             this.setState({
-                user: response,
-                isLoading: false
+                isLoading: true
             });
-        }).catch(error => {
-            if(error.status === 404) {
-                this.setState({
-                    notFound: true,
-                    isLoading: false
-                });
+        }
+        getUserProfile(username)
+            .then(response => {
+                if (this._isMounted) {
+                    this.setState({
+                        user: response,
+                        isLoading: false
+                    });
+                }
+            }).catch(error => {
+            if (error.status === 404) {
+                if (this._isMounted) {
+                    this.setState({
+                        notFound: true,
+                        isLoading: false
+                    });
+                }
             } else {
-                this.setState({
-                    serverError: true,
-                    isLoading: false
-                });        
+                if (this._isMounted) {
+                    this.setState({
+                        serverError: true,
+                        isLoading: false
+                    });
+                }
             }
-        });        
+        });
     }
-      
+
+    componentWillUnmount() {
+        this._isMounted = false;
+    }
+
     componentDidMount() {
+        this._isMounted = true;
         const username = this.props.match.params.username;
         this.loadUserProfile(username);
     }

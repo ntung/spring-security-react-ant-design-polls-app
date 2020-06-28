@@ -9,6 +9,8 @@ import { withRouter } from 'react-router-dom';
 import './PollList.css';
 
 class PollList extends Component {
+    _isMounted = false;
+
     constructor(props) {
         super(props);
         this.state = {
@@ -40,66 +42,82 @@ class PollList extends Component {
         if(!promise) {
             return;
         }
-
-        this.setState({
-            isLoading: true
-        });
+        if (this._isMounted) {
+            this.setState({
+                isLoading: true
+            });
+        }
 
         promise            
         .then(response => {
             const polls = this.state.polls.slice();
             const currentVotes = this.state.currentVotes.slice();
-
-            this.setState({
-                polls: polls.concat(response.content),
-                page: response.page,
-                size: response.size,
-                totalElements: response.totalElements,
-                totalPages: response.totalPages,
-                last: response.last,
-                currentVotes: currentVotes.concat(Array(response.content.length).fill(null)),
-                isLoading: false
-            })
+            if (this._isMounted) {
+                this.setState({
+                    polls: polls.concat(response.content),
+                    page: response.page,
+                    size: response.size,
+                    totalElements: response.totalElements,
+                    totalPages: response.totalPages,
+                    last: response.last,
+                    currentVotes: currentVotes.concat(Array(response.content.length).fill(null)),
+                    isLoading: false
+                });
+            }
         }).catch(error => {
-            this.setState({
-                isLoading: false
-            })
+            if (this._isMounted) {
+                this.setState({
+                    isLoading: false
+                })
+            }
         });  
         
     }
 
     componentDidMount() {
-        this.loadPollList();
+        this._isMounted = true;
+        if (this._isMounted) {
+            this.loadPollList();
+        }
+    }
+
+    componentWillUnmount() {
+        this._isMounted = false;
     }
 
     componentDidUpdate(nextProps) {
         if(this.props.isAuthenticated !== nextProps.isAuthenticated) {
             // Reset State
-            this.setState({
-                polls: [],
-                page: 0,
-                size: 10,
-                totalElements: 0,
-                totalPages: 0,
-                last: true,
-                currentVotes: [],
-                isLoading: false
-            });    
-            this.loadPollList();
+            if (this._isMounted) {
+                this.setState({
+                    polls: [],
+                    page: 0,
+                    size: 10,
+                    totalElements: 0,
+                    totalPages: 0,
+                    last: true,
+                    currentVotes: [],
+                    isLoading: false
+                });
+                this.loadPollList();
+            }
         }
     }
 
     handleLoadMore() {
-        this.loadPollList(this.state.page + 1);
+        if (this._isMounted) {
+            this.loadPollList(this.state.page + 1);
+        }
     }
 
     handleVoteChange(event, pollIndex) {
         const currentVotes = this.state.currentVotes.slice();
         currentVotes[pollIndex] = event.target.value;
-
-        this.setState({
-            currentVotes: currentVotes
-        });
+        if (this._isMounted) {
+            this.setState({
+                currentVotes: currentVotes
+            });
+        }
     }
 
 
@@ -126,9 +144,11 @@ class PollList extends Component {
         .then(response => {
             const polls = this.state.polls.slice();
             polls[pollIndex] = response;
-            this.setState({
-                polls: polls
-            });        
+            if (this._isMounted) {
+                this.setState({
+                    polls: polls
+                });
+            }
         }).catch(error => {
             if(error.status === 401) {
                 this.props.handleLogout('/login', 'error', 'You have been logged out. Please login to vote');    
